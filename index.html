@@ -305,26 +305,6 @@
   }
   .btn-share-selected:hover{background:#1EBE55;}
 
-  .download-report-bar{
-    display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 2px rgba(20,25,40,0.04);
-  }
-  .download-report-bar .field{min-width:150px;}
-  .btn-download-report{
-    background:#1E88C7;color:#fff;padding:11px 18px;font-size:12px;
-    letter-spacing:0.03em;text-transform:uppercase;font-family:'Oswald',sans-serif;font-weight:600;
-    border-radius:3px;flex-shrink:0;
-  }
-  .btn-download-report:hover{background:#166C9E;}
-  .btn-download-report:disabled{background:#A6ACB6;cursor:not-allowed;}
-  .download-report-status{
-    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-soft);
-    margin-bottom:10px;min-height:14px;
-  }
-  .download-report-status.ok{color:var(--ok);}
-  .download-report-status.err{color:var(--danger);}
-
   /* ── MODE HP ───────────────────────── */
   @media (max-width:560px){
     body{padding:18px 10px 90px;}
@@ -418,19 +398,6 @@
       <h2>Riwayat Pengerjaan</h2>
       <button class="btn btn-refresh" id="refreshBtn" type="button">↻ History</button>
     </div>
-
-    <div class="download-report-bar">
-      <div class="field small">
-        <label>Dari Tanggal</label>
-        <input type="date" id="reportDari">
-      </div>
-      <div class="field small">
-        <label>Sampai Tanggal</label>
-        <input type="date" id="reportSampai">
-      </div>
-      <button class="btn btn-download-report" id="downloadReportBtn" type="button">⬇️ Download Report</button>
-    </div>
-    <div id="downloadReportStatus" class="download-report-status"></div>
 
     <div id="selectedActionsBar" class="selected-actions-bar">
       <span id="selectedCountText">0 dipilih</span>
@@ -988,87 +955,6 @@
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   }
 
-  // ==== DOWNLOAD REPORT (rentang tanggal, termasuk yang sudah di-post) ====
-  function csvEscape(v){
-    const s = String(v == null ? '' : v);
-    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-
-  function motifSummaryFor(row){
-    return (row.motif_rows||[]).map(grp => {
-      const itemsText = (grp.items||[]).map(it => [it.motif, it.area].filter(Boolean).join(' / ')).filter(Boolean);
-      if(!itemsText.length) return '';
-      return (grp.no || '#') + ' ' + itemsText.join(' & ');
-    }).filter(Boolean).join(' | ');
-  }
-
-  async function downloadReport(){
-    const statusEl = document.getElementById('downloadReportStatus');
-    const btn = document.getElementById('downloadReportBtn');
-    const dari = document.getElementById('reportDari').value;
-    const sampai = document.getElementById('reportSampai').value;
-
-    if(!dari || !sampai){
-      statusEl.textContent = 'Isi dulu Dari Tanggal & Sampai Tanggal.';
-      statusEl.className = 'download-report-status err';
-      return;
-    }
-    if(dari > sampai){
-      statusEl.textContent = 'Dari Tanggal tidak boleh lebih besar dari Sampai Tanggal.';
-      statusEl.className = 'download-report-status err';
-      return;
-    }
-
-    btn.disabled = true;
-    statusEl.textContent = 'Mengambil data...';
-    statusEl.className = 'download-report-status';
-
-    try{
-      const { data, error } = await supabaseClient
-        .from(TABLE_NAME)
-        .select('*')
-        .gte('tanggal_laporan', dari)
-        .lte('tanggal_laporan', sampai)
-        .order('tanggal_laporan', { ascending: true });
-      if(error) throw error;
-
-      if(!data || !data.length){
-        statusEl.textContent = 'Tidak ada data pada rentang tanggal itu.';
-        statusEl.className = 'download-report-status err';
-        return;
-      }
-
-      const headers = ['Tanggal Laporan','Shift','Customer','Invoice','Rencana Stufing','Total PL','Motif & Area','Status'];
-      const lines = [headers.map(csvEscape).join(',')];
-      data.forEach(r => {
-        lines.push([
-          r.tanggal_laporan || '',
-          r.shift || '',
-          r.customer || '',
-          r.invoice || '',
-          r.tanggal || '',
-          r.total_pl || '',
-          motifSummaryFor(r),
-          r.posted ? 'SUDAH DI-POST' : 'AKTIF'
-        ].map(csvEscape).join(','));
-      });
-
-      const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'REPORT_EXPORT_' + dari + '_sd_' + sampai + '.csv';
-      a.click();
-
-      statusEl.textContent = 'Berhasil download ' + data.length + ' baris data.';
-      statusEl.className = 'download-report-status ok';
-    }catch(err){
-      statusEl.textContent = 'Gagal download: ' + (err.message || err);
-      statusEl.className = 'download-report-status err';
-    }finally{
-      btn.disabled = false;
-    }
-  }
-
   // ==== SHARE SEMUA PENGERJAAN KE WA SEKALIGUS ====
   function shareAllToWA() {
     const shiftGlobal = document.getElementById('globalShift').value || '1';
@@ -1118,7 +1004,6 @@
   document.getElementById('refreshBtn').onclick = loadHistory;
   document.getElementById('shareWaGlobalBtn').onclick = shareAllToWA;
   document.getElementById('shareSelectedBtn').onclick = shareSelectedToWA;
-  document.getElementById('downloadReportBtn').onclick = downloadReport;
 
   plans.push(newPlan());
   if(restoreAutosave()){
