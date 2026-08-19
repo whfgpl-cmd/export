@@ -352,8 +352,8 @@
 
  <div class="masthead">
     <div>
-      <h1>FORM EXPORT</h1>
-      <div class="sub">· WH FINISH GOODS</div>
+      <h1>FORM UPDATE PENGERJAAN EXPORT</h1>
+      <div class="sub">· GBJ LEBANI</div>
     </div>
     <div class="tag" id="planCount">1 PENGERJAAN</div>
   </div>
@@ -597,7 +597,7 @@
     body.appendChild(dividerEl('Finish — Motif & Area'));
     plan.motifGroups.forEach((grp, gi) => body.appendChild(renderMotifGroup(plan, grp, gi)));
     const addMotifWrap = el('div','add-brg-wrap');
-    const addMotifBtn = el('button','btn btn-add','+ Tambah Pagar (#)');
+    const addMotifBtn = el('button','btn btn-add','+ Tambah Container (#)');
     addMotifBtn.type='button';
     addMotifBtn.onclick = () => { plan.motifGroups.push({no:'#'+Math.min(plan.motifGroups.length+1,30), items:[{motif:'',area:''}]}); render(); };
     addMotifWrap.appendChild(addMotifBtn);
@@ -612,7 +612,7 @@
     const g = el('div','brg-group');
     const head = el('div','brg-head');
     head.appendChild(makeNoSelect(grp.no || ('#'+(gi+1)), (v)=>{ grp.no = v; }));
-    head.appendChild(el('span','hint','Motif &amp; Area untuk pagar ini'));
+    head.appendChild(el('span','hint','Container(motif) &amp; Area untuk pagar ini'));
     if(plan.motifGroups.length > 1){
       const rm = el('button','btn btn-icon','✕');
       rm.type='button'; rm.title='Hapus pagar ini';
