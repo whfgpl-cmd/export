@@ -352,8 +352,8 @@
 
  <div class="masthead">
     <div>
-      <h1>FORM UPDATE PENGERJAAN EXPORT</h1>
-      <div class="sub">· GBJ LEBANI</div>
+      <h1>FORM EXPORT</h1>
+      <div class="sub">· WH FINISH GOODS</div>
     </div>
     <div class="tag" id="planCount">1 PENGERJAAN</div>
   </div>
@@ -433,6 +433,7 @@
       invoice: '',
       tanggal: '',
       totalPL: '',
+      keteranganFinish: '',
       motifGroups: [ { no:'#1', items:[ { motif:'', area:'' } ] } ]
     };
   }
@@ -595,9 +596,20 @@
 
     // DIVIDER: Finish (judul untuk Motif & Area)
     body.appendChild(dividerEl('Finish — Motif & Area'));
+
+    const rKet = el('div','field-row');
+    const fKet = el('div','field');
+    fKet.appendChild(el('label',null,'Keterangan'));
+    const inKet = document.createElement('input');
+    inKet.type='text'; inKet.placeholder='Keterangan (opsional)'; inKet.value=plan.keteranganFinish;
+    inKet.oninput = e => { plan.keteranganFinish = e.target.value; updateJson(); };
+    fKet.appendChild(inKet);
+    rKet.appendChild(fKet);
+    body.appendChild(rKet);
+
     plan.motifGroups.forEach((grp, gi) => body.appendChild(renderMotifGroup(plan, grp, gi)));
     const addMotifWrap = el('div','add-brg-wrap');
-    const addMotifBtn = el('button','btn btn-add','+ Tambah Container (#)');
+    const addMotifBtn = el('button','btn btn-add','+ Tambah Pagar (#)');
     addMotifBtn.type='button';
     addMotifBtn.onclick = () => { plan.motifGroups.push({no:'#'+Math.min(plan.motifGroups.length+1,30), items:[{motif:'',area:''}]}); render(); };
     addMotifWrap.appendChild(addMotifBtn);
@@ -612,7 +624,7 @@
     const g = el('div','brg-group');
     const head = el('div','brg-head');
     head.appendChild(makeNoSelect(grp.no || ('#'+(gi+1)), (v)=>{ grp.no = v; }));
-    head.appendChild(el('span','hint','Container(motif) &amp; Area untuk pagar ini'));
+    head.appendChild(el('span','hint','Motif &amp; Area untuk pagar ini'));
     if(plan.motifGroups.length > 1){
       const rm = el('button','btn btn-icon','✕');
       rm.type='button'; rm.title='Hapus pagar ini';
@@ -667,6 +679,7 @@
       invoice: plan.invoice,
       tanggal: plan.tanggal || null,
       total_pl: plan.totalPL,
+      keterangan_finish: plan.keteranganFinish,
       motif_rows: plan.motifGroups,
       shift: shiftGlobal,
       tanggal_laporan: tglGlobal
@@ -691,6 +704,7 @@
       invoice: r.invoice || '',
       tanggal: r.tanggal || '',
       totalPL: r.total_pl || '',
+      keteranganFinish: r.keterangan_finish || '',
       motifGroups: (r.motif_rows && r.motif_rows.length) ? r.motif_rows : [{ no:'#1', items:[{motif:'',area:''}] }]
     }];
     if(r.tanggal_laporan) document.getElementById('globalTanggal').value = r.tanggal_laporan;
@@ -807,7 +821,7 @@
       const { data, error } = await supabaseClient
         .from(TABLE_NAME)
         .select('*')
-        .eq('posted', false)
+        .or('posted.eq.false,posted.is.null')
         .order('created_at', { ascending:false })
         .limit(50);
       if(error) throw error;
@@ -865,7 +879,7 @@
       postBtn.type = 'button';
       postBtn.className = 'btn-aksi-icon btn-post';
       postBtn.title = 'Post laporan ini (akan hilang dari daftar aktif)';
-      postBtn.innerHTML = '⌯⌲';
+      postBtn.innerHTML = '✈️';
       postBtn.addEventListener('click', () => postHistoryItem(r));
       tdAksi.appendChild(postBtn);
 
@@ -931,9 +945,13 @@
       '',
       `✅ *${r.customer || '-'} INV ${r.invoice || '-'}*`,
       `RENCANA STUFING ${stufingStr}`,
-      `TOTAL PL ${r.total_pl || '-'}`,
+      'TOTAL PL ' + (r.total_pl || '-'),
       '*FINISH*'
     ];
+
+    if(r.keterangan_finish && r.keterangan_finish.trim() !== ''){
+      lines.push(`KET: ${r.keterangan_finish}`);
+    }
 
     (r.motif_rows || []).forEach(grp => {
       (grp.items || []).forEach(item => {
@@ -979,6 +997,10 @@
       lines.push(`RENCANA STUFING ${stufingStr}`);
       lines.push(`TOTAL PL ${p.totalPL || '-'}`);
       lines.push('*FINISH*');
+
+      if(p.keteranganFinish && p.keteranganFinish.trim() !== ''){
+        lines.push(`KET: ${p.keteranganFinish}`);
+      }
 
       (p.motifGroups || []).forEach(grp => {
         (grp.items || []).forEach(item => {
