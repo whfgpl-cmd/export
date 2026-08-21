@@ -516,7 +516,7 @@
       const state = JSON.parse(raw);
       if(!state || !state.plans || !state.plans.length) return false;
       planSeq = state.planSeq || state.plans.length;
-      plans = state.plans;
+      plans = state.plans.map(p => ({ keteranganFinish:'', ...p }));
       if(state.globalTanggal) document.getElementById('globalTanggal').value = state.globalTanggal;
       if(state.globalShift) document.getElementById('globalShift').value = state.globalShift;
       return true;
@@ -601,7 +601,7 @@
     const fKet = el('div','field');
     fKet.appendChild(el('label',null,'Keterangan'));
     const inKet = document.createElement('input');
-    inKet.type='text'; inKet.placeholder='Keterangan (opsional)'; inKet.value=plan.keteranganFinish;
+    inKet.type='text'; inKet.placeholder='Keterangan (opsional)'; inKet.value=plan.keteranganFinish || '';
     inKet.oninput = e => { plan.keteranganFinish = e.target.value; updateJson(); };
     fKet.appendChild(inKet);
     rKet.appendChild(fKet);
