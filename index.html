@@ -622,7 +622,7 @@
     const fPL = el('div','field');
     fPL.appendChild(el('label',null,'Total PL — Container'));
     const inPL = document.createElement('input');
-    inPL.type='text'; inPL.placeholder='cth: 4 (manual / angka)'; inPL.value=plan.totalPL;
+    inPL.type='text'; inPL.placeholder='cth: 4 Container'; inPL.value=plan.totalPL;
     inPL.oninput = e => { plan.totalPL = e.target.value; updateJson(); };
     fPL.appendChild(inPL);
     r3.appendChild(fPL);
