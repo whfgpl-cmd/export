@@ -669,7 +669,7 @@
     const g = el('div','brg-group');
     const head = el('div','brg-head');
     head.appendChild(makeNoSelect(grp.no || ('#'+(gi+1)), (v)=>{ grp.no = v; }));
-    head.appendChild(el('span','hint','Motif &amp; Area untuk pagar ini'));
+    head.appendChild(el('span','hint','Container &amp; Area untuk pagar ini'));
     if(plan.motifGroups.length > 1){
       const rm = el('button','btn btn-icon','✕');
       rm.type='button'; rm.title='Hapus pagar ini';
