@@ -1142,7 +1142,7 @@
   function shareSelectedToWA(){
     if(selectedHistoryIds.size === 0) return;
     const selectedRows = lastHistoryRows.filter(r => selectedHistoryIds.has(r.id));
-    const text = selectedRows.map(buildRowWaText).join('\n\n——————————\n\n');
+    const text = selectedRows.map(buildRowWaText).join('\n\n');
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   }
 
