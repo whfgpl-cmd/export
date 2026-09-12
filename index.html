@@ -977,19 +977,24 @@
   }
 
   // ==== BANGUN TEKS WA UNTUK 1 BARIS DATA RIWAYAT ====
-  function buildRowWaText(r){
+  function buildReportHeader(r){
     const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
     const months = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 
     const repDate = r.tanggal_laporan ? new Date(r.tanggal_laporan) : null;
     const repStr = (repDate && !isNaN(repDate)) ? `${days[repDate.getDay()]}, ${repDate.getDate()} ${months[repDate.getMonth()]} ${repDate.getFullYear()}` : (r.tanggal_laporan || '-');
     const shift = r.shift || '1';
+
+    return [
+      `*REPORT UPDATE PENGERJAAN EXPORT SHIFT ${shift}*`,
+      repStr
+    ].join('\n');
+  }
+
+  function buildCustomerBlock(r){
     const stufingStr = r.tanggal ? r.tanggal.toUpperCase() : '-';
 
     const lines = [
-      `*REPORT UPDATE PENGERJAAN EXPORT SHIFT ${shift}*`,
-      repStr,
-      '',
       `✅ *${r.customer || '-'} INV ${r.invoice || '-'}*`,
       `RENCANA STUFING ${stufingStr}`,
       'TOTAL PL ' + (r.total_pl || '-'),
@@ -1024,7 +1029,10 @@
   function shareSelectedToWA(){
     if(selectedHistoryIds.size === 0) return;
     const selectedRows = lastHistoryRows.filter(r => selectedHistoryIds.has(r.id));
-    const text = selectedRows.map(buildRowWaText).join('\n\n——————————\n\n');
+    if(!selectedRows.length) return;
+    const header = buildReportHeader(selectedRows[0]);
+    const body = selectedRows.map(buildCustomerBlock).join('\n\n');
+    const text = header + '\n\n' + body;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   }
 
