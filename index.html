@@ -276,9 +276,12 @@
 
   .hist-table th.th-aksi{width:108px;text-align:center;}
   .hist-table td.td-aksi{text-align:center;padding:6px;white-space:nowrap;}
-  .hist-table th.th-check{width:36px;text-align:center;}
-  .hist-table td.td-check{text-align:center;padding:6px;}
-  .hist-table input[type="checkbox"]{width:16px;height:16px;accent-color:var(--amber);cursor:pointer;}
+  .hist-table th.th-sel{width:150px;}
+  .hist-table th.th-sel .sel-head-row{display:flex;align-items:center;gap:6px;font-size:11px;}
+  .hist-table th.th-sel input[type="checkbox"]{width:14px;height:14px;accent-color:#fff;cursor:pointer;}
+  .cell-sel{display:flex;align-items:flex-start;gap:7px;}
+  .cell-sel input[type="checkbox"]{width:16px;height:16px;accent-color:var(--amber);cursor:pointer;margin-top:2px;flex-shrink:0;}
+  .cell-sel .cell-sel-text{flex:1;}
   .btn-aksi-icon{
     display:inline-flex;align-items:center;justify-content:center;
     width:30px;height:30px;border-radius:6px;border:none;
@@ -363,7 +366,7 @@
 
     /* tabel riwayat: scroll horizontal daripada diperas rusak */
     #historyWrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-    .hist-table{min-width:680px;font-size:12px;}
+    .hist-table{min-width:760px;font-size:12px;}
   }
 </style>
 </head>
@@ -453,7 +456,8 @@
   let planSeq = 0;
   let plans = [];
   let lastHistoryRows = [];
-  let selectedHistoryIds = new Set();
+  let selectedFinishIds = new Set();
+  let selectedKeluarIds = new Set();
 
   function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
 
@@ -877,7 +881,8 @@
       if(error) throw error;
       statusEl.textContent = 'Data berhasil di-post.';
       statusEl.className = 'ok';
-      selectedHistoryIds.delete(r.id);
+      selectedFinishIds.delete(r.id);
+      selectedKeluarIds.delete(r.id);
       if(editingId === r.id) cancelEditPlan();
       loadHistory();
     }catch(err){
@@ -972,6 +977,22 @@
     }
   }
 
+  function motifSummaryFor(row){
+    return (row.motif_rows||[]).map(grp => {
+      const itemsText = (grp.items||[]).map(it => [it.motif, it.area].filter(Boolean).join(' / ')).filter(Boolean);
+      if(!itemsText.length) return '';
+      return (grp.no || '#') + ' ' + itemsText.join(' & ');
+    }).filter(Boolean).join(', ');
+  }
+
+  function keluarSummaryFor(row){
+    return (row.keluar_rows||[]).map(grp => {
+      const itemsText = (grp.items||[]).map(it => [it.motif, it.area].filter(Boolean).join(' / ')).filter(Boolean);
+      if(!itemsText.length) return '';
+      return (grp.no || '#') + ' ' + itemsText.join(' & ');
+    }).filter(Boolean).join(', ');
+  }
+
   function renderHistory(rows){
     lastHistoryRows = rows;
     const wrap = document.getElementById('historyWrap');
@@ -982,38 +1003,58 @@
     }
     // buang id yang sudah tidak ada di data terbaru
     const validIds = new Set(rows.map(r => r.id));
-    selectedHistoryIds.forEach(id => { if(!validIds.has(id)) selectedHistoryIds.delete(id); });
+    selectedFinishIds.forEach(id => { if(!validIds.has(id)) selectedFinishIds.delete(id); });
+    selectedKeluarIds.forEach(id => { if(!validIds.has(id)) selectedKeluarIds.delete(id); });
 
     const table = document.createElement('table');
     table.className = 'hist-table';
     table.innerHTML = '<thead><tr>' +
-      '<th class="th-check"><input type="checkbox" id="checkAllHistory"></th>' +
-      '<th>Tanggal</th><th>Customer</th><th>Invoice</th><th>Total PL</th><th>Motif/Area</th><th class="th-aksi">Aksi</th>' +
+      '<th>Tanggal</th><th>Customer</th><th>Invoice</th><th>Total PL</th>' +
+      '<th class="th-sel"><div class="sel-head-row"><input type="checkbox" id="checkAllFinish"> Motif/Area</div></th>' +
+      '<th class="th-sel"><div class="sel-head-row"><input type="checkbox" id="checkAllKeluar"> Barang Keluar</div></th>' +
+      '<th class="th-aksi">Aksi</th>' +
       '</tr></thead>';
     const tbody = document.createElement('tbody');
     rows.forEach(r => {
       const tr = document.createElement('tr');
-      const motifSummary = (r.motif_rows||[]).map(grp => {
-        const itemsText = (grp.items||[]).map(it => [it.motif, it.area].filter(Boolean).join(' / ')).filter(Boolean);
-        if(!itemsText.length) return '';
-        return (grp.no || '#') + ' ' + itemsText.join(' & ');
-      }).filter(Boolean).join(', ');
+      const motifSummary = motifSummaryFor(r);
+      const keluarSummary = keluarSummaryFor(r);
       tr.innerHTML =
-        '<td class="td-check"><input type="checkbox" class="row-check"></td>' +
         '<td>' + (r.tanggal || '-') + '</td>' +
         '<td>' + (r.customer || '-') + '</td>' +
         '<td>' + (r.invoice || '-') + '</td>' +
         '<td>' + (r.total_pl || '-') + '</td>' +
-        '<td>' + (motifSummary || '-') + '</td>' +
+        '<td class="td-sel-motif"></td>' +
+        '<td class="td-sel-keluar"></td>' +
         '<td class="td-aksi"></td>';
 
-      const chk = tr.querySelector('.row-check');
-      chk.checked = selectedHistoryIds.has(r.id);
-      chk.addEventListener('change', () => {
-        if(chk.checked) selectedHistoryIds.add(r.id); else selectedHistoryIds.delete(r.id);
+      const tdMotif = tr.querySelector('.td-sel-motif');
+      const cellMotif = el('label','cell-sel');
+      const chkMotif = document.createElement('input');
+      chkMotif.type = 'checkbox';
+      chkMotif.checked = selectedFinishIds.has(r.id);
+      chkMotif.addEventListener('change', () => {
+        if(chkMotif.checked) selectedFinishIds.add(r.id); else selectedFinishIds.delete(r.id);
         updateSelectedBar();
         syncCheckAllState();
       });
+      cellMotif.appendChild(chkMotif);
+      cellMotif.appendChild(el('span','cell-sel-text', motifSummary || '-'));
+      tdMotif.appendChild(cellMotif);
+
+      const tdKeluar = tr.querySelector('.td-sel-keluar');
+      const cellKeluar = el('label','cell-sel');
+      const chkKeluar = document.createElement('input');
+      chkKeluar.type = 'checkbox';
+      chkKeluar.checked = selectedKeluarIds.has(r.id);
+      chkKeluar.addEventListener('change', () => {
+        if(chkKeluar.checked) selectedKeluarIds.add(r.id); else selectedKeluarIds.delete(r.id);
+        updateSelectedBar();
+        syncCheckAllState();
+      });
+      cellKeluar.appendChild(chkKeluar);
+      cellKeluar.appendChild(el('span','cell-sel-text', keluarSummary || '-'));
+      tdKeluar.appendChild(cellKeluar);
 
       const tdAksi = tr.querySelector('.td-aksi');
       const postBtn = document.createElement('button');
@@ -1045,9 +1086,14 @@
     wrap.innerHTML = '';
     wrap.appendChild(table);
 
-    const checkAll = document.getElementById('checkAllHistory');
-    checkAll.addEventListener('change', () => {
-      rows.forEach(r => { if(checkAll.checked) selectedHistoryIds.add(r.id); else selectedHistoryIds.delete(r.id); });
+    const checkAllFinish = document.getElementById('checkAllFinish');
+    checkAllFinish.addEventListener('change', () => {
+      rows.forEach(r => { if(checkAllFinish.checked) selectedFinishIds.add(r.id); else selectedFinishIds.delete(r.id); });
+      renderHistory(rows);
+    });
+    const checkAllKeluar = document.getElementById('checkAllKeluar');
+    checkAllKeluar.addEventListener('change', () => {
+      rows.forEach(r => { if(checkAllKeluar.checked) selectedKeluarIds.add(r.id); else selectedKeluarIds.delete(r.id); });
       renderHistory(rows);
     });
     syncCheckAllState();
@@ -1055,84 +1101,96 @@
   }
 
   function syncCheckAllState(){
-    const checkAll = document.getElementById('checkAllHistory');
-    if(!checkAll) return;
-    const rowChecks = document.querySelectorAll('.row-check');
-    const allChecked = rowChecks.length > 0 && Array.from(rowChecks).every(c => c.checked);
-    checkAll.checked = allChecked;
+    const checkAllFinish = document.getElementById('checkAllFinish');
+    const checkAllKeluar = document.getElementById('checkAllKeluar');
+    const motifChecks = document.querySelectorAll('.td-sel-motif input[type="checkbox"]');
+    const keluarChecks = document.querySelectorAll('.td-sel-keluar input[type="checkbox"]');
+    if(checkAllFinish) checkAllFinish.checked = motifChecks.length > 0 && Array.from(motifChecks).every(c => c.checked);
+    if(checkAllKeluar) checkAllKeluar.checked = keluarChecks.length > 0 && Array.from(keluarChecks).every(c => c.checked);
   }
 
   function updateSelectedBar(){
     const bar = document.getElementById('selectedActionsBar');
     const countText = document.getElementById('selectedCountText');
-    const count = selectedHistoryIds.size;
+    const count = selectedFinishIds.size + selectedKeluarIds.size;
     countText.textContent = count + ' dipilih';
     bar.classList.toggle('show', count > 0);
   }
 
   // ==== BANGUN TEKS ISI (TANPA HEADER) UNTUK 1 BARIS DATA RIWAYAT ====
-  function buildRowBodyText(r){
+  // opts.includeFinish / opts.includeKeluar mengontrol bagian mana yang disertakan
+  function buildRowBodyText(r, opts){
+    opts = opts || {};
+    const includeFinish = opts.includeFinish !== false;
+    const includeKeluar = opts.includeKeluar !== false;
     const stufingStr = r.tanggal ? r.tanggal.toUpperCase() : '-';
 
     const lines = [
       `✅ *${r.customer || '-'} INV ${r.invoice || '-'}*`,
       `RENCANA STUFING ${stufingStr}`,
-      'TOTAL PL ' + (r.total_pl || '-'),
-      '*FINISH*'
+      'TOTAL PL ' + (r.total_pl || '-')
     ];
 
-    if(r.keterangan_finish && r.keterangan_finish.trim() !== ''){
-      lines.push(`KET: ${r.keterangan_finish}`);
-    }
+    if(includeFinish){
+      lines.push('*FINISH*');
 
-    (r.motif_rows || []).forEach(grp => {
-      const validTexts = (grp.items || [])
-        .map(item => [item.motif, item.area].filter(Boolean).join(' '))
-        .filter(text => text.trim() !== '');
-      validTexts.forEach((text, idx) => {
-        if(idx === 0){
-          lines.push(`${grp.no || '#'} ${text}`);
-        } else {
-          lines.push(`    ${text}`);
-        }
+      if(r.keterangan_finish && r.keterangan_finish.trim() !== ''){
+        lines.push(`KET: ${r.keterangan_finish}`);
+      }
+
+      (r.motif_rows || []).forEach(grp => {
+        const validTexts = (grp.items || [])
+          .map(item => [item.motif, item.area].filter(Boolean).join(' '))
+          .filter(text => text.trim() !== '');
+        validTexts.forEach((text, idx) => {
+          if(idx === 0){
+            lines.push(`${grp.no || '#'} ${text}`);
+          } else {
+            lines.push(`    ${text}`);
+          }
+        });
       });
-    });
 
-    if(r.keterangan_area_barang && r.keterangan_area_barang.trim() !== ''){
-      lines.push(`*${r.keterangan_area_barang}*`);
+      if(r.keterangan_area_barang && r.keterangan_area_barang.trim() !== ''){
+        lines.push(`*${r.keterangan_area_barang}*`);
+      }
     }
 
-    lines.push('');
-    lines.push('*Brg yg Dikeluarkan*');
+    if(includeKeluar){
+      lines.push('');
+      lines.push('*Brg yg Dikeluarkan*');
 
-    if(r.keterangan_keluar && r.keterangan_keluar.trim() !== ''){
-      lines.push(`KET: ${r.keterangan_keluar}`);
-    }
+      if(r.keterangan_keluar && r.keterangan_keluar.trim() !== ''){
+        lines.push(`KET: ${r.keterangan_keluar}`);
+      }
 
-    (r.keluar_rows || []).forEach(grp => {
-      const validTexts = (grp.items || [])
-        .map(item => [item.motif, item.area].filter(Boolean).join(' '))
-        .filter(text => text.trim() !== '');
-      validTexts.forEach((text, idx) => {
-        if(idx === 0){
-          lines.push(`${grp.no || '#'} ${text}`);
-        } else {
-          lines.push(`    ${text}`);
-        }
+      (r.keluar_rows || []).forEach(grp => {
+        const validTexts = (grp.items || [])
+          .map(item => [item.motif, item.area].filter(Boolean).join(' '))
+          .filter(text => text.trim() !== '');
+        validTexts.forEach((text, idx) => {
+          if(idx === 0){
+            lines.push(`${grp.no || '#'} ${text}`);
+          } else {
+            lines.push(`    ${text}`);
+          }
+        });
       });
-    });
 
-    if(r.keterangan_area_barang_keluar && r.keterangan_area_barang_keluar.trim() !== ''){
-      lines.push(`*${r.keterangan_area_barang_keluar}*`);
+      if(r.keterangan_area_barang_keluar && r.keterangan_area_barang_keluar.trim() !== ''){
+        lines.push(`*${r.keterangan_area_barang_keluar}*`);
+      }
     }
 
     return lines.join('\n');
   }
 
   // ==== BAGIKAN DATA YANG DICEKLIS KE WA ====
+  // Per invoice, hanya bagian yang dicentang (Motif/Area dan/atau Barang Keluar) yang disertakan.
   function shareSelectedToWA(){
-    if(selectedHistoryIds.size === 0) return;
-    const selectedRows = lastHistoryRows.filter(r => selectedHistoryIds.has(r.id));
+    const selectedIds = new Set([...selectedFinishIds, ...selectedKeluarIds]);
+    if(selectedIds.size === 0) return;
+    const selectedRows = lastHistoryRows.filter(r => selectedIds.has(r.id));
 
     const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
     const months = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
@@ -1149,7 +1207,10 @@
 
     selectedRows.forEach(r => {
       lines.push('');
-      lines.push(buildRowBodyText(r));
+      lines.push(buildRowBodyText(r, {
+        includeFinish: selectedFinishIds.has(r.id),
+        includeKeluar: selectedKeluarIds.has(r.id)
+      }));
     });
 
     const text = lines.join('\n');
@@ -1160,14 +1221,6 @@
   function csvEscape(v){
     const s = String(v == null ? '' : v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-
-  function motifSummaryFor(row){
-    return (row.motif_rows||[]).map(grp => {
-      const itemsText = (grp.items||[]).map(it => [it.motif, it.area].filter(Boolean).join(' / ')).filter(Boolean);
-      if(!itemsText.length) return '';
-      return (grp.no || '#') + ' ' + itemsText.join(' & ');
-    }).filter(Boolean).join(' | ');
   }
 
   async function downloadReport(){
@@ -1206,7 +1259,7 @@
         return;
       }
 
-      const headers = ['Tanggal Laporan','Shift','Customer','Invoice','Rencana Stufing','Total PL','Keterangan Finish','Motif & Area','Keterangan Area Barang','Status'];
+      const headers = ['Tanggal Laporan','Shift','Customer','Invoice','Rencana Stufing','Total PL','Keterangan Finish','Motif & Area','Keterangan Area Barang','Keterangan Keluar','Barang Keluar','Keterangan Area Barang Keluar','Status'];
       const lines = [headers.map(csvEscape).join(',')];
       data.forEach(r => {
         lines.push([
@@ -1219,6 +1272,9 @@
           r.keterangan_finish || '',
           motifSummaryFor(r),
           r.keterangan_area_barang || '',
+          r.keterangan_keluar || '',
+          keluarSummaryFor(r),
+          r.keterangan_area_barang_keluar || '',
           r.posted ? 'SUDAH DI-POST' : 'AKTIF'
         ].map(csvEscape).join(','));
       });
