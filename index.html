@@ -1259,7 +1259,7 @@
         return;
       }
 
-      const headers = ['Tanggal Laporan','Shift','Customer','Invoice','Rencana Stufing','Total PL','Keterangan Finish','Motif & Area','Keterangan Area Barang','Keterangan Keluar','Barang Keluar','Keterangan Area Barang Keluar','Status'];
+      const headers = ['Tanggal Laporan','Shift','Customer','Invoice','Rencana Stufing','Total PL','Keterangan Finish','Motif & Area','Keterangan Area Barang','Keterangan Keluar','Brg Yg Dikeluarkan','Keterangan Area Barang Keluar','Status'];
       const lines = [headers.map(csvEscape).join(',')];
       data.forEach(r => {
         lines.push([
